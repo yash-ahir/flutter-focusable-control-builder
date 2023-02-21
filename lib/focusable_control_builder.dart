@@ -9,6 +9,9 @@ class FocusableControlBuilder extends StatefulWidget {
     required this.builder,
     this.onPressed,
     this.onLongPressed,
+    this.onPressHeld,
+    this.onPressReleased,
+    this.onPressCancelled,
     this.onHoverChanged,
     this.onFocusChanged,
     this.semanticButtonLabel,
@@ -24,17 +27,26 @@ class FocusableControlBuilder extends StatefulWidget {
   }) : super(key: key);
 
   /// Return a widget representing the control based on the current [FocusableControlState]
-  final Widget Function(BuildContext context, FocusableControlState control) builder;
+  final Widget Function(BuildContext context, FocusableControlState control)
+      builder;
 
   final VoidCallback? onPressed;
 
   final VoidCallback? onLongPressed;
 
+  final VoidCallback? onPressHeld;
+
+  final VoidCallback? onPressReleased;
+
+  final VoidCallback? onPressCancelled;
+
   /// Called after the hover state has changed.
-  final Widget Function(BuildContext context, FocusableControlState control)? onHoverChanged;
+  final Widget Function(BuildContext context, FocusableControlState control)?
+      onHoverChanged;
 
   /// Called after the focus state has changed.
-  final Widget Function(BuildContext context, FocusableControlState control)? onFocusChanged;
+  final Widget Function(BuildContext context, FocusableControlState control)?
+      onFocusChanged;
 
   /// Optional: If not null, the control will be marked as a semantic button and given a label.
   final String? semanticButtonLabel;
@@ -72,12 +84,15 @@ class FocusableControlBuilder extends StatefulWidget {
 
 class FocusableControlState extends State<FocusableControlBuilder> {
   final FocusNode _focusNode = FocusNode();
+
   FocusNode get focusNode => _focusNode;
 
   bool _isHovered = false;
+
   bool get isHovered => _isHovered;
 
   bool _isFocused = false;
+
   bool get isFocused => _isFocused;
 
   bool get hasPressHandler => widget.onPressed != null;
@@ -100,13 +115,38 @@ class FocusableControlState extends State<FocusableControlBuilder> {
     widget.onPressed?.call();
   }
 
+  void _handlePressHeld() {
+    if (widget.onPressHeld == null) return;
+    if (widget.requestFocusOnPress) {
+      _focusNode.requestFocus();
+    }
+    widget.onPressHeld?.call();
+  }
+
+  void _handlePressReleased() {
+    if (widget.onPressReleased == null) return;
+    if (widget.requestFocusOnPress) {
+      _focusNode.requestFocus();
+    }
+    widget.onPressReleased?.call();
+  }
+
+  void _handlePressCancelled() {
+    if (widget.onPressCancelled == null) return;
+    if (widget.requestFocusOnPress) {
+      _focusNode.requestFocus();
+    }
+    widget.onPressCancelled?.call();
+  }
+
   /// By default, will bind the [ActivateIntent] from the flutter SDK to the onPressed callback.
   /// This will enable SPACE and ENTER keys on most platforms.
   /// Also accepts additional actions provided externally.
   Map<Type, Action<Intent>> _getKeyboardActions() {
     return {
       if (hasPressHandler) ...{
-        ActivateIntent: CallbackAction<Intent>(onInvoke: (_) => _handlePressed()),
+        ActivateIntent:
+            CallbackAction<Intent>(onInvoke: (_) => _handlePressed()),
       },
       ...(widget.actions ?? {}),
     };
@@ -114,7 +154,8 @@ class FocusableControlState extends State<FocusableControlBuilder> {
 
   @override
   Widget build(BuildContext context) {
-    MouseCursor defaultCursor = hasPressHandler ? SystemMouseCursors.click : MouseCursor.defer;
+    MouseCursor defaultCursor =
+        hasPressHandler ? SystemMouseCursors.click : MouseCursor.defer;
     MouseCursor cursor = widget.cursor ?? defaultCursor;
 
     // Create the core FocusableActionDetector
@@ -146,6 +187,9 @@ class FocusableControlState extends State<FocusableControlBuilder> {
     return GestureDetector(
       behavior: widget.hitTestBehavior,
       onTap: _handlePressed,
+      onTapDown: (_) => _handlePressHeld,
+      onTapUp: (_) => _handlePressReleased,
+      onTapCancel: _handlePressCancelled,
       onLongPress: widget.onLongPressed,
       child: content,
     );
