@@ -95,6 +95,10 @@ class FocusableControlState extends State<FocusableControlBuilder> {
 
   bool get isFocused => _isFocused;
 
+  bool _isHeld = false;
+
+  bool get isHeld => _isHeld;
+
   bool get hasPressHandler => widget.onPressed != null;
 
   void _handleHoverChanged(v) {
@@ -116,26 +120,20 @@ class FocusableControlState extends State<FocusableControlBuilder> {
   }
 
   void _handlePressHeld() {
+    setState(() => _isHeld = true);
     if (widget.onPressHeld == null) return;
-    if (widget.requestFocusOnPress) {
-      _focusNode.requestFocus();
-    }
     widget.onPressHeld?.call();
   }
 
   void _handlePressReleased() {
+    setState(() => _isHeld = false);
     if (widget.onPressReleased == null) return;
-    if (widget.requestFocusOnPress) {
-      _focusNode.requestFocus();
-    }
     widget.onPressReleased?.call();
   }
 
   void _handlePressCancelled() {
+    setState(() => _isHeld = false);
     if (widget.onPressCancelled == null) return;
-    if (widget.requestFocusOnPress) {
-      _focusNode.requestFocus();
-    }
     widget.onPressCancelled?.call();
   }
 
@@ -187,8 +185,8 @@ class FocusableControlState extends State<FocusableControlBuilder> {
     return GestureDetector(
       behavior: widget.hitTestBehavior,
       onTap: _handlePressed,
-      onTapDown: (_) => _handlePressHeld,
-      onTapUp: (_) => _handlePressReleased,
+      onTapDown: (_) => _handlePressHeld(),
+      onTapUp: (_) => _handlePressReleased(),
       onTapCancel: _handlePressCancelled,
       onLongPress: widget.onLongPressed,
       child: content,
